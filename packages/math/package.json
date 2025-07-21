@@ -1,5 +1,5 @@
 {
-  "name": "@overextended/vector",
+  "name": "@overextended/math",
   "module": "index.ts",
   "type": "module",
   "devDependencies": {

@@ -1,11 +1,11 @@
 import { describe, expect, it } from "bun:test";
-import { Vector, Vector2, Vector3, Vector4 } from "index"; // adjust path as needed
+import { Vector2, Vector3, Vector4 } from "vector";
 
 describe("Vector2", () => {
-  it("should construct with default y = x", () => {
+  it("should construct with default y = 0", () => {
     const v = new Vector2(5);
     expect(v.x).toBe(5);
-    expect(v.y).toBe(5);
+    expect(v.y).toBe(0);
   });
 
   it("should perform vector addition", () => {
@@ -33,18 +33,11 @@ describe("Vector2", () => {
 });
 
 describe("Vector3", () => {
-  it("should construct with default y = x, z = y", () => {
+  it("should construct with default y = 0, z = 0", () => {
     const v = new Vector3(2);
     expect(v.x).toBe(2);
-    expect(v.y).toBe(2);
-    expect(v.z).toBe(2);
-  });
-
-  it("should support toVec2", () => {
-    const v = new Vector3(1, 2, 3);
-    const v2 = v.toVec2();
-    expect(v2.x).toBe(1);
-    expect(v2.y).toBe(2);
+    expect(v.y).toBe(0);
+    expect(v.z).toBe(0);
   });
 
   it("should compute cross product", () => {
@@ -64,21 +57,12 @@ describe("Vector3", () => {
 });
 
 describe("Vector4", () => {
-  it("should construct with default y = x, z = y, w = z", () => {
+  it("should construct with default y = 0, z = 0, w = 0", () => {
     const v = new Vector4(1);
     expect(v.x).toBe(1);
-    expect(v.y).toBe(1);
-    expect(v.z).toBe(1);
-    expect(v.w).toBe(1);
-  });
-
-  it("should support toVec2 and toVec3", () => {
-    const v = new Vector4(1, 2, 3, 4);
-    const v2 = v.toVec2();
-    const v3 = v.toVec3();
-    expect(v2.x).toBe(1);
-    expect(v2.y).toBe(2);
-    expect(v3.z).toBe(3);
+    expect(v.y).toBe(0);
+    expect(v.z).toBe(0);
+    expect(v.w).toBe(0);
   });
 
   it("should swizzle to xyz", () => {
@@ -98,10 +82,10 @@ describe("Vector base class", () => {
     expect(clone).not.toBe(v);
   });
 
-  it("should replace values", () => {
+  it("should copy values", () => {
     const a = new Vector4(1, 1, 1, 1);
     const b = new Vector4(4, 3, 2, 1);
-    a.replace(b);
+    a.copy(b);
     expect(a.equals(b)).toBe(true);
   });
 
@@ -113,14 +97,12 @@ describe("Vector base class", () => {
   });
 
   it("should create from array", () => {
-    const v = Vector.fromArray([1, 2, 3]) as Vector3;
-    expect(v instanceof Vector3).toBe(true);
+    const v = Vector3.fromArray([1, 2, 3]);
     expect(v.z).toBe(3);
   });
 
   it("should create from object", () => {
-    const v = Vector.fromObject({ x: 1, y: 2, z: 3 }) as Vector3;
-    expect(v instanceof Vector3).toBe(true);
+    const v = Vector3.fromObject({ x: 1, y: 2, z: 3 });
     expect(v.z).toBe(3);
   });
 
