@@ -3,7 +3,7 @@ import { clamp } from "./clamp.js";
 /**
  * An object with vector components.
  */
-interface Vec {
+export interface Vec {
   x: number;
   y: number;
   z?: number;
@@ -13,7 +13,7 @@ interface Vec {
 /**
  * Represents a 2-dimensional vector.
  */
-interface Vec2 {
+export interface Vec2 {
   x: number;
   y: number;
   z?: undefined;
@@ -23,7 +23,7 @@ interface Vec2 {
 /**
  * Represents a 3-dimensional vector.
  */
-interface Vec3 {
+export interface Vec3 {
   x: number;
   y: number;
   z: number;
@@ -33,7 +33,7 @@ interface Vec3 {
 /**
  * Represents a 4-dimensional vector.
  */
-interface Vec4 {
+export interface Vec4 {
   x: number;
   y: number;
   z: number;

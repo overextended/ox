@@ -48,7 +48,7 @@ export class Grid<T extends GridEntry> {
    * @param point The centre point in world coordinates.
    * @param width The width of the rectangle (optional, defaults to cellWidth).
    * @param height The height of the rectangle (optional, defaults to cellHeight).
-   * @returns `A tuple representing grid cell indices.`
+   * @returns A tuple representing grid cell indices.
    */
   private getDimensions(
     point: Point,
