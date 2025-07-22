@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach } from "bun:test";
-import { Grid, type GridEntry } from "@overextended/grid/index.ts";
+import { Grid, type GridEntry } from "../src/grid.js";
 
 function createEntry(x: number, y: number, radius = 1): GridEntry {
   return { coords: { x, y }, radius };

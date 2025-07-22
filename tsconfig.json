@@ -1,33 +1,26 @@
 {
   "compilerOptions": {
-    // Environment setup & latest features
+    "composite": true,
+    "declaration": true,
+    "declarationMap": true,
+    "emitDeclarationOnly": false,
+    "noEmit": false,
+    "target": "ES2022",
+    "module": "NodeNext",
     "lib": ["ESNext"],
-    "target": "ESNext",
-    "module": "Preserve",
-    "moduleDetection": "force",
-    "allowJs": true,
-
-
-    // Bundler mode
-    "moduleResolution": "bundler",
+    "moduleResolution": "NodeNext",
     "verbatimModuleSyntax": true,
-    
-    // Best practices
     "strict": true,
     "skipLibCheck": true,
     "noFallthroughCasesInSwitch": true,
     "noUncheckedIndexedAccess": true,
     "noImplicitOverride": true,
-
-    // Some stricter flags (disabled by default)
     "noUnusedLocals": false,
     "noUnusedParameters": false,
-    "noPropertyAccessFromIndexSignature": false
+    "noPropertyAccessFromIndexSignature": false,
+    "outDir": "./dist",
+    "baseUrl": "./src",
+    "rootDir": "./src"
   },
-  "files": [],
-  "references": [
-    { "path": "./packages/core" },
-    { "path": "./packages/math" },
-    { "path": "./packages/grid" },
-  ]
+  "include": ["src"]
 }

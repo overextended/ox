@@ -1,14 +1,15 @@
 {
-  "name": "ox",
-  "type": "module",
-  "private": true,
+  "name": "@overextended/core",
+  "version": "0.0.2",
   "devDependencies": {
     "@types/bun": "latest"
   },
   "peerDependencies": {
     "typescript": "^5"
   },
-  "workspaces": [
-    "packages/*"
-  ]
+  "exports": {
+    "./*": "./dist/*"
+  },
+  "files": ["dist"],
+  "type": "module"
 }

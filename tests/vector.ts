@@ -1,5 +1,5 @@
 import { describe, expect, it } from "bun:test";
-import { Vector2, Vector3, Vector4 } from "@overextended/math/vector.ts";
+import { Vector2, Vector3, Vector4 } from "../src/vector.js";
 
 describe("Vector2", () => {
   it("should construct with default y = 0", () => {

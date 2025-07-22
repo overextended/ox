@@ -1,6 +1,6 @@
 import { describe, it, expect } from "bun:test";
-import { waitFor } from "@overextended/core/waitFor.ts";
-import { getRandomString } from "@overextended/core/random.ts";
+import { waitFor } from "../src/waitFor.js";
+import { getRandomString } from "../src/random.js";
 
 describe("getRandomString", () => {
   it("generates string matching the pattern", () => {
