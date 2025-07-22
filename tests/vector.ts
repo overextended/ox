@@ -1,5 +1,5 @@
 import { describe, expect, it } from "bun:test";
-import { Vector2, Vector3, Vector4 } from "vector";
+import { Vector2, Vector3, Vector4 } from "@overextended/math/vector.ts";
 
 describe("Vector2", () => {
   it("should construct with default y = 0", () => {
@@ -107,7 +107,7 @@ describe("Vector base class", () => {
   });
 
   it("should throw for invalid constructor args", () => {
-    // @ts-expect-error
+    //@ts-expect-error
     expect(() => new Vector2("not a number")).toThrow(TypeError);
   });
 
