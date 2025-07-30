@@ -1,5 +1,5 @@
 import { describe, it, expect } from "bun:test";
-import { waitFor } from "../src/waitFor.js";
+import { waitFor } from "../src/utils.js";
 import { getRandomString } from "../src/random.js";
 
 describe("getRandomString", () => {
