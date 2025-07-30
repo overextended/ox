@@ -1,4 +1,4 @@
-import { clamp } from "./clamp.js";
+import { clamp } from "./math.js";
 
 /**
  * An object with vector components.
