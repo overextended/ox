@@ -64,7 +64,7 @@ type VectorObject<T> = T extends typeof Vector
   ? Vec3
   : T extends Vec2
   ? Vec2
-  : never;
+  : Vec;
 
 type CVector = typeof Vector2 | typeof Vector3 | typeof Vector4;
 type VectorKey = "x" | "y" | "z" | "w";
@@ -182,7 +182,7 @@ export abstract class Vector implements Vec {
 
   /**
    * Adds the components of the vector by the components of another vector or scalar value.
-   * @param v The second vector or scalar value.
+   * @param v The target vector or scalar value.
    * @returns A reference to the vector.
    */
   public add(v: VectorObject<this> | number): this {
@@ -191,7 +191,7 @@ export abstract class Vector implements Vec {
 
   /**
    * Subtracts the components of the vector by the components of another vector or scalar value.
-   * @param v The second vector or scalar value.
+   * @param v The target vector or scalar value.
    * @returns A reference to the vector.
    */
   public subtract(v: VectorObject<this> | number): this {
@@ -200,7 +200,7 @@ export abstract class Vector implements Vec {
 
   /**
    * Multiplies the components of the vector by the components of another vector or scalar value.
-   * @param v The second vector or scalar value.
+   * @param v The target vector or scalar value.
    * @returns A reference to the vector.
    */
   public multiply(v: VectorObject<this> | number): this {
@@ -209,11 +209,21 @@ export abstract class Vector implements Vec {
 
   /**
    * Divides the components of the vector by the components of another vector or scalar value.
-   * @param v The second vector or scalar vector.
+   * @param v The target vector or scalar vector.
    * @returns A reference to the vector.
    */
   public divide(v: VectorObject<this> | number): this {
     return this.operate(v, (x, y) => x / y);
+  }
+
+  /**
+   * Linearly interpolates each component of the vector towards another vector or scalar value.
+   * @param v The target vector or scalar value.
+   * @param factor The interpolation factor, typically between 0 and 1.
+   * @returns A reference to the vector.
+   */
+  public lerp(v: VectorObject<this> | number, factor: number): this {
+    return this.operate(v, (a, b) => a + (b - a) * factor);
   }
 
   /**
