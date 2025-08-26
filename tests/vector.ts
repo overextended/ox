@@ -102,7 +102,7 @@ describe("Vector base class", () => {
   });
 
   it("should create from object", () => {
-    const v = Vector3.fromObject({ x: 1, y: 2, z: 3 });
+    const v = Vector3.fromInput({ x: 1, y: 2, z: 3 });
     expect(v.z).toBe(3);
   });
 

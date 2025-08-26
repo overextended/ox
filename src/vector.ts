@@ -73,17 +73,16 @@ type Vec2Swizzle = `${VectorKey}${VectorKey}`;
 type Vec3Swizzle = `${VectorKey}${VectorKey}${VectorKey}`;
 type Vec4Swizzle = `${VectorKey}${VectorKey}${VectorKey}${VectorKey}`;
 
-const components = ["x", "y", "z", "w"] as const;
-
 /**
  * A base vector class inherited by all vector classes.
  */
-export abstract class Vector implements Vec {
-  static size = 0;
-  public x;
-  public y;
-  public z;
-  public w;
+export abstract class Vector {
+  static size = 2;
+  public 0: number;
+  public 1: number;
+  public 2?: number;
+  public 3?: number;
+  [index: number]: number | undefined;
 
   /**
    * Constructs a new vector with optional components.
@@ -106,14 +105,30 @@ export abstract class Vector implements Vec {
       }
     }
 
-    this.x = x;
-    this.y = y;
-    this.z = z;
-    this.w = w;
+    this[0] = x;
+    this[1] = y;
+    this[2] = z;
+    this[3] = w;
   }
 
   get size() {
     return (this.constructor as CVector).size;
+  }
+
+  get x() {
+    return this[0];
+  }
+
+  get y() {
+    return this[1];
+  }
+
+  set x(v: number) {
+    this[0] = v;
+  }
+
+  set y(v: number) {
+    this[1] = v;
   }
 
   /**
@@ -131,15 +146,23 @@ export abstract class Vector implements Vec {
   }
 
   /**
-   * Creates a vector from an object or array of vector components.
+   * Creates a vector from a number, array, or object.
    *
-   * @param primitive - An object or array with `x`, `y`, `z`, and `w` components.
+   * @param primitive - A number, array, or object with vector-like components.
    * @returns A new vector instance corresponding to the input.
    */
-  public static fromObject<
+  public static fromInput<
     T extends CVector,
     U extends VectorObject<T> | VectorArray<T>
-  >(this: T, primitive: U): InstanceType<T> {
+  >(this: T, primitive: number | U): InstanceType<T> {
+    if (typeof primitive === "number")
+      return new this(
+        primitive,
+        primitive,
+        primitive,
+        primitive
+      ) as InstanceType<T>;
+
     if (Array.isArray(primitive))
       return this.fromArray(primitive as VectorArray<T>);
 
@@ -169,13 +192,13 @@ export abstract class Vector implements Vec {
    * @returns A reference to the vector.
    */
   private operate(
-    v: Vec | number,
+    v: VectorObject<this> | number,
     operator: (x: number, y: number) => number
   ): this {
-    const isNumber = typeof v === "number";
+    const vec = (this.constructor as any).fromInput(v);
 
-    for (const key of this.keys())
-      this[key] = operator(this[key]!, isNumber ? v : v[key] ?? 0);
+    for (let i = 0; i < this.size; i++)
+      this[i] = operator(this[i]!, vec[i] ?? 0);
 
     return this;
   }
@@ -234,14 +257,14 @@ export abstract class Vector implements Vec {
    */
   public dot(v: VectorObject<this>): number {
     const vec =
-      v instanceof Vector ? v : (this.constructor as any).fromObject(this);
+      v instanceof Vector ? v : (this.constructor as any).fromInput(v);
 
     if (this.size !== vec.size)
       throw new Error("Vectors must have the same dimensions.");
 
     let result = 0;
 
-    for (const key of this.keys()) result += this[key]! * vec[key]!;
+    for (let i = 0; i < this.size; i++) result += this[i]! * vec[i];
 
     return result;
   }
@@ -263,7 +286,7 @@ export abstract class Vector implements Vec {
   public lengthSquared(): number {
     let sum = 0;
 
-    for (const value of this) sum += value * value;
+    for (let i = 0; i < this.size; i++) sum += this[i]! * this[i]!;
 
     return sum;
   }
@@ -277,22 +300,12 @@ export abstract class Vector implements Vec {
     return Math.sqrt(this.lengthSquared());
   }
 
-  *[Symbol.iterator](): Iterator<number> {
-    for (const key of components) {
-      const value = this[key];
-
-      if (value === undefined) break;
-
-      yield value;
-    }
+  public forEach(fn: (value: number, index: number) => void) {
+    for (let i = 0; i < this.size; i++) fn(this[i]!, i);
   }
 
-  public *keys(): IterableIterator<VectorKey> {
-    for (const key of components) {
-      if (this[key] === undefined) break;
-
-      yield key;
-    }
+  *[Symbol.iterator]() {
+    for (let i = 0; i < this.size; i++) yield this[i]!;
   }
 
   /**
@@ -308,7 +321,7 @@ export abstract class Vector implements Vec {
    * @returns A cloned vector.
    */
   public clone(): this {
-    return (this.constructor as any).fromObject(this) as this;
+    return (this.constructor as any).fromInput(this) as this;
   }
 
   /**
@@ -318,11 +331,12 @@ export abstract class Vector implements Vec {
    * @returns The squared distance.
    */
   public distanceSquared(v: VectorObject<this>): number {
-    const vec = v as Vec;
     let sum = 0;
+    const vec =
+      v instanceof Vector ? v : (this.constructor as any).fromInput(v);
 
-    for (const key of this.keys()) {
-      const diff = this[key]! - vec[key]!;
+    for (let i = 0; i < this.size; i++) {
+      const diff = this[i]! - vec[i]!;
       sum += diff * diff;
     }
 
@@ -355,10 +369,10 @@ export abstract class Vector implements Vec {
    * @returns A reference to the vector.
    */
   public copy(v: Partial<VectorObject<this>>): this {
-    const vec = v as unknown as Vec;
+    const vec = (this.constructor as any).fromInput(v);
 
-    for (const key of this.keys())
-      if (typeof vec[key] === "number") this[key] = vec[key];
+    for (let i = 0; i < this.size; i++)
+      if (typeof vec[i] === "number") this[i] = vec[i]!;
 
     return this;
   }
@@ -394,7 +408,7 @@ export abstract class Vector implements Vec {
   public equals(v: this) {
     if (this.size !== v.size) return false;
 
-    for (const key of this.keys()) if (this[key] !== v[key]) return false;
+    for (let i = 0; i < this.size; i++) if (this[i] !== v[i]) return false;
 
     return true;
   }
@@ -412,11 +426,20 @@ export abstract class Vector implements Vec {
     const minNumber = typeof min === "number";
     const maxNumber = typeof max === "number";
 
-    for (const key of this.keys()) {
-      this[key] = clamp(
-        this[key]!,
-        minNumber ? min : (min as any)[key],
-        maxNumber ? max : (max as any)[key]
+    min =
+      minNumber || min instanceof Vector
+        ? min
+        : (this.constructor as any).fromInput(min);
+    max =
+      maxNumber || max instanceof Vector
+        ? max
+        : (this.constructor as any).fromInput(max);
+
+    for (let i = 0; i < this.size; i++) {
+      this[i] = clamp(
+        this[i]!,
+        minNumber ? min : (min as any)[i],
+        maxNumber ? max : (max as any)[i]
       );
     }
 
@@ -428,7 +451,7 @@ export abstract class Vector implements Vec {
    * @returns A reference to the vector.
    */
   public ceil() {
-    for (const key of this.keys()) this[key] = Math.floor(this[key]!);
+    for (let i = 0; i < this.size; i++) this[i] = Math.floor(this[i]!);
 
     return this;
   }
@@ -438,7 +461,7 @@ export abstract class Vector implements Vec {
    * @returns A reference to the vector.
    */
   public floor() {
-    for (const key of this.keys()) this[key] = Math.floor(this[key]!);
+    for (let i = 0; i < this.size; i++) this[i] = Math.floor(this[i]!);
 
     return this;
   }
@@ -448,7 +471,7 @@ export abstract class Vector implements Vec {
    * @returns A reference to the vector.
    */
   public round() {
-    for (const key of this.keys()) this[key] = Math.round(this[key]!);
+    for (let i = 0; i < this.size; i++) this[i] = Math.round(this[i]!);
 
     return this;
   }
@@ -457,10 +480,8 @@ export abstract class Vector implements Vec {
 /**
  * Represents a 2-dimensional vector.
  */
-export class Vector2 extends Vector implements Vec2 {
+export class Vector2 extends Vector {
   static override size = 2;
-  declare z: undefined;
-  declare w: undefined;
 
   /**
    * Constructs a new 2D vector.
@@ -477,18 +498,20 @@ export class Vector2 extends Vector implements Vec2 {
    * @param v The other vector.
    * @returns A new vector orthogonal to both inputs.
    */
-  public cross(v: Vec2): number {
-    return this.x * v.y - this.y * v.x;
+  public cross(v: VectorObject<this>): number {
+    const vec =
+      v instanceof Vector ? v : (this.constructor as any).fromInput(v);
+
+    return this[0] * vec[1] - this[1] * vec[0];
   }
 }
 
 /**
  * Represents a 3-dimensional vector.
  */
-export class Vector3 extends Vector implements Vec3 {
+export class Vector3 extends Vector {
   static override size = 3;
-  public override z = 0;
-  declare w: undefined;
+  public override 2 = 0;
 
   /**
    * Constructs a new 3D vector.
@@ -498,7 +521,15 @@ export class Vector3 extends Vector implements Vec3 {
    */
   constructor(x = 0, y = 0, z = 0) {
     super(x, y, z);
-    this.z = z;
+    this[2] = z;
+  }
+
+  get z() {
+    return this[2];
+  }
+
+  set z(v: number) {
+    this[2] = v;
   }
 
   /**
@@ -507,11 +538,14 @@ export class Vector3 extends Vector implements Vec3 {
    * @param v The other vector.
    * @returns A new vector orthogonal to both inputs.
    */
-  public cross(v: Vec3): Vector3 {
+  public cross(v: VectorObject<this>): Vector3 {
+    const vec =
+      v instanceof Vector ? v : (this.constructor as any).fromInput(v);
+
     return new Vector3(
-      this.y * v.z - this.z * v.y,
-      this.z * v.x - this.x * v.z,
-      this.x * v.y - this.y * v.x
+      this[1] * vec[2] - this[2] * vec[1],
+      this[2] * vec[0] - this[0] * vec[2],
+      this[0] * vec[1] - this[1] * vec[0]
     );
   }
 }
@@ -519,10 +553,10 @@ export class Vector3 extends Vector implements Vec3 {
 /**
  * Represents a 4-dimensional vector.
  */
-export class Vector4 extends Vector implements Vec4 {
+export class Vector4 extends Vector {
   static override size = 4;
-  public override z = 0;
-  public override w = 0;
+  public override 2 = 0;
+  public override 3 = 0;
 
   /**
    * Constructs a new 4D vector.
@@ -533,7 +567,23 @@ export class Vector4 extends Vector implements Vec4 {
    */
   constructor(x = 0, y = 0, z = 0, w = 0) {
     super(x, y, z, w);
-    this.z = z;
-    this.w = w;
+    this[2] = z;
+    this[3] = w;
+  }
+
+  get z() {
+    return this[2];
+  }
+
+  get w() {
+    return this[3];
+  }
+
+  set z(v: number) {
+    this[2] = v;
+  }
+
+  set w(v: number) {
+    this[3] = v;
   }
 }
