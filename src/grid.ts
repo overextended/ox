@@ -22,8 +22,8 @@ interface GridCache<T extends GridEntry> {
   bottom?: number;
   lastX?: number;
   lastY?: number;
-  entries: ReadonlyArray<T>;
-  lastCell: ReadonlySet<T>;
+  entries: T[];
+  lastCell: Set<T>;
 }
 
 /**
@@ -85,9 +85,14 @@ export class Grid<T extends GridEntry> {
    * Clears the internal cache used to optimise repeated queries.
    */
   private resetCache() {
+    const entries = this.#cache.entries ?? [];
+    const lastCell = this.#cache.lastCell ?? new Set();
+    lastCell.clear();
+    entries.length = 0;
+
     return (this.#cache = {
-      entries: [],
-      lastCell: new Set(),
+      entries: entries,
+      lastCell: lastCell,
     });
   }
 
@@ -119,7 +124,10 @@ export class Grid<T extends GridEntry> {
    * @returns A tuple representing the centre of the grid cell in world space.
    */
   public getWorldPosition(x: number, y: number): [number, number] {
-    return [x + 0.5 * this.cellWidth, y + 0.5 * this.cellHeight];
+    const wx = x * this.cellWidth + 0.5 * this.cellWidth;
+    const wy = y * this.cellHeight + 0.5 * this.cellHeight;
+
+    return [wx, wy];
   }
 
   /**
@@ -150,7 +158,10 @@ export class Grid<T extends GridEntry> {
    * @param predicate An optional filter applied to the entries.
    * @returns A read-only array of matching entries.
    */
-  public getEntries(point: Point, predicate?: (entry: T) => boolean) {
+  public getEntries(
+    point: Point,
+    predicate?: (entry: T) => boolean
+  ): ReadonlyArray<T> {
     const [left, right, top, bottom] = this.getDimensions(point);
 
     if (
@@ -160,8 +171,8 @@ export class Grid<T extends GridEntry> {
       this.#cache.bottom === bottom
     ) {
       return predicate
-        ? this.#cache.entries!.filter(predicate)
-        : this.#cache.entries!;
+        ? this.#cache.entries.filter(predicate)
+        : this.#cache.entries;
     }
 
     const entries = new Set<T>();
@@ -287,10 +298,12 @@ export class Grid<T extends GridEntry> {
    */
   public update(
     entry: T,
-    x: number,
-    y: number,
-    width?: number,
-    height = width
+    values: Partial<
+      Point &
+        (T extends RectEntry
+          ? { width: number; height: number }
+          : { radius: number })
+    >
   ) {
     if (!this.#entries.has(entry)) {
       throw new Error(`Cannot update an entry that doesn't exist in the grid.`);
@@ -298,8 +311,20 @@ export class Grid<T extends GridEntry> {
 
     this.remove(entry);
 
-    entry.coords.x = x;
-    entry.coords.y = y;
+    if (typeof values.x === "number") entry.coords.x = values.x;
+    if (typeof values.y === "number") entry.coords.y = values.y;
+
+    if ("width" in values && typeof values.width === "number") {
+      (entry as RectEntry).width = values.width;
+    }
+
+    if ("height" in values && typeof values.height === "number") {
+      (entry as RectEntry).height = values.height;
+    }
+
+    if ("radius" in values && typeof values.radius === "number") {
+      (entry as CircleEntry).radius = values.radius;
+    }
 
     this.add(entry);
   }

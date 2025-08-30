@@ -6,10 +6,10 @@ function createEntry(x: number, y: number, radius = 1): GridEntry {
 }
 
 describe("Grid", () => {
-  let grid: Grid<GridEntry>;
+  let grid = new Grid();
 
   beforeEach(() => {
-    grid = new Grid();
+    grid.clear();
   });
 
   it("adds and tracks a single entry", () => {
@@ -74,7 +74,7 @@ describe("Grid", () => {
   it("updates an entry’s position correctly", () => {
     const entry = createEntry(100, 100);
     grid.add(entry);
-    grid.update(entry, 300, 400);
+    grid.update(entry, { x: 300, y: 400 });
 
     const cell = grid.getCell({ x: 300, y: 400 });
     expect(Array.from(cell)).toContain(entry);
