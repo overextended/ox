@@ -1,4 +1,4 @@
-import { clamp } from "./math.js";
+import { clamp } from './math.js';
 
 /**
  * An object with vector components.
@@ -46,12 +46,12 @@ export interface Vec4 {
 type VectorArray<T> = T extends typeof Vector
   ? VectorArray<InstanceType<T>>
   : T extends Vec4
-  ? [number, number, number, number]
-  : T extends Vec3
-  ? [number, number, number]
-  : T extends Vec2
-  ? [number, number]
-  : any;
+    ? [number, number, number, number]
+    : T extends Vec3
+      ? [number, number, number]
+      : T extends Vec2
+        ? [number, number]
+        : any;
 
 /**
  * An object that can be converted to a vector.
@@ -59,15 +59,15 @@ type VectorArray<T> = T extends typeof Vector
 type VectorObject<T> = T extends typeof Vector
   ? VectorObject<InstanceType<T>>
   : T extends Vec4
-  ? Vec4
-  : T extends Vec3
-  ? Vec3
-  : T extends Vec2
-  ? Vec2
-  : Vec;
+    ? Vec4
+    : T extends Vec3
+      ? Vec3
+      : T extends Vec2
+        ? Vec2
+        : Vec;
 
 type CVector = typeof Vector2 | typeof Vector3 | typeof Vector4;
-type VectorKey = "x" | "y" | "z" | "w";
+type VectorKey = 'x' | 'y' | 'z' | 'w';
 type VectorSwizzle = Vec2Swizzle | Vec3Swizzle | Vec4Swizzle;
 type Vec2Swizzle = `${VectorKey}${VectorKey}`;
 type Vec3Swizzle = `${VectorKey}${VectorKey}${VectorKey}`;
@@ -94,11 +94,11 @@ export abstract class Vector {
    */
   constructor(...args: number[]) {
     for (let i = 0; i < this.size; i++) {
-      if (typeof args[i] !== "number") {
+      if (typeof args[i] !== 'number') {
         throw new TypeError(
           `${
             this.constructor.name
-          } argument at index ${i} must be a number, but got ${typeof args[i]}`
+          } argument at index ${i} must be a number, but got ${typeof args[i]}`,
         );
       }
     }
@@ -116,7 +116,7 @@ export abstract class Vector {
    */
   public static fromArray<T extends CVector, U extends VectorArray<T>>(
     this: T,
-    primitive: U
+    primitive: U,
   ): InstanceType<T> {
     const [x, y, z, w] = primitive as [number, number, number?, number?];
     return new this(x, y, z, w) as InstanceType<T>;
@@ -130,14 +130,14 @@ export abstract class Vector {
    */
   public static fromInput<
     T extends CVector,
-    U extends VectorObject<T> | VectorArray<T>
+    U extends VectorObject<T> | VectorArray<T>,
   >(this: T, primitive: number | U): InstanceType<T> {
-    if (typeof primitive === "number")
+    if (typeof primitive === 'number')
       return new this(
         primitive,
         primitive,
         primitive,
-        primitive
+        primitive,
       ) as InstanceType<T>;
 
     if (Array.isArray(primitive))
@@ -156,7 +156,7 @@ export abstract class Vector {
    */
   public static fromArrays<T extends typeof Vector, U extends VectorArray<T>[]>(
     this: T,
-    primitives: U
+    primitives: U,
   ): InstanceType<T>[] {
     return primitives.map(this.fromArray) as InstanceType<T>[];
   }
@@ -170,7 +170,7 @@ export abstract class Vector {
    */
   private operate(
     v: Partial<VectorObject<this> | this> | number,
-    operator: (x: number, y: number) => number
+    operator: (x: number, y: number) => number,
   ): this {
     const vec =
       this.constructor === v.constructor
@@ -243,7 +243,7 @@ export abstract class Vector {
       v instanceof Vector ? v : (this.constructor as any).fromInput(v);
 
     if (this.size !== vec.size)
-      throw new Error("Vectors must have the same dimensions.");
+      throw new Error('Vectors must have the same dimensions.');
 
     return (
       this.x * vec.x +
@@ -286,7 +286,7 @@ export abstract class Vector {
   }
 
   public forEach(
-    callback: (value: number, key: keyof Vec, index: number) => void
+    callback: (value: number, key: keyof Vec, index: number) => void,
   ): void {
     const keys = (this.constructor as typeof Vector).keys;
 
@@ -302,7 +302,7 @@ export abstract class Vector {
    * Returns a string representation of the vector, such as "vector3(1, 2, 3)".
    */
   public toString() {
-    return `vector${this.size}(${this.toArray().join(", ")})`;
+    return `vector${this.size}(${this.toArray().join(', ')})`;
   }
 
   /**
@@ -368,16 +368,16 @@ export abstract class Vector {
    * @returns A new vector based on the swizzle pattern.
    */
   public swizzle<T extends VectorSwizzle>(
-    components: T
+    components: T,
   ): T extends Vec2Swizzle
     ? Vector2
     : T extends Vec3Swizzle
-    ? Vector3
-    : Vector4 {
+      ? Vector3
+      : Vector4 {
     if (!/^[xyzw]+$/.test(components))
       throw new Error(`Invalid key in swizzle components (${components}).`);
 
-    const arr = components.split("").map((char) => (this as any)[char] ?? 0);
+    const arr = components.split('').map((char) => (this as any)[char] ?? 0);
 
     return new (this.constructor as any)(...arr);
   }
@@ -406,20 +406,20 @@ export abstract class Vector {
    */
   public clamp(
     min: VectorObject<this> | number,
-    max: VectorObject<this> | number
+    max: VectorObject<this> | number,
   ): this {
     const minVec =
-      typeof min === "number" || min instanceof Vector
+      typeof min === 'number' || min instanceof Vector
         ? min
         : (this.constructor as any).fromInput(min);
 
     const maxVec =
-      typeof max === "number" || max instanceof Vector
+      typeof max === 'number' || max instanceof Vector
         ? max
         : (this.constructor as any).fromInput(max);
 
-    const minIsNumber = typeof min === "number";
-    const maxIsNumber = typeof max === "number";
+    const minIsNumber = typeof min === 'number';
+    const maxIsNumber = typeof max === 'number';
 
     this.forEach((value, key) => {
       const minValue = minIsNumber ? min : minVec[key];
@@ -461,7 +461,7 @@ export abstract class Vector {
  */
 export class Vector2 extends Vector {
   static override size = 2;
-  static override keys: readonly (keyof Vec2)[] = ["x", "y"];
+  static override keys: readonly (keyof Vec2)[] = ['x', 'y'];
 
   /**
    * Constructs a new 2D vector.
@@ -498,7 +498,7 @@ export class Vector2 extends Vector {
  */
 export class Vector3 extends Vector {
   static override size = 3;
-  static override keys: readonly (keyof Vec3)[] = ["x", "y", "z"];
+  static override keys: readonly (keyof Vec3)[] = ['x', 'y', 'z'];
   public override z = 0;
 
   /**
@@ -533,7 +533,7 @@ export class Vector3 extends Vector {
     return new Vector3(
       this.y * vec.z - this.z * vec.y,
       this.z * vec.x - this.x * vec.z,
-      this.x * vec.y - this.y * vec.x
+      this.x * vec.y - this.y * vec.x,
     );
   }
 }
@@ -543,7 +543,7 @@ export class Vector3 extends Vector {
  */
 export class Vector4 extends Vector {
   static override size = 4;
-  static override keys: readonly (keyof Vec4)[] = ["x", "y", "z", "w"];
+  static override keys: readonly (keyof Vec4)[] = ['x', 'y', 'z', 'w'];
   public override z = 0;
   public override w = 0;
 

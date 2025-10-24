@@ -1,4 +1,4 @@
-export type Point = { x: number; y: number; };
+export type Point = { x: number; y: number };
 
 interface Entry {
   coords: Point;
@@ -46,7 +46,7 @@ export class Grid<T extends GridEntry> {
 
   constructor(
     readonly cellWidth: number = 128,
-    readonly cellHeight = cellWidth
+    readonly cellHeight = cellWidth,
   ) {
     this.resetCache();
   }
@@ -63,7 +63,7 @@ export class Grid<T extends GridEntry> {
   private getDimensions(
     point: Point,
     width?: number,
-    height?: number
+    height?: number,
   ): [number, number, number, number] {
     const halfWidth = (width ?? this.cellWidth) / 2;
     const halfHeight = (height ?? this.cellHeight) / 2;
@@ -85,8 +85,8 @@ export class Grid<T extends GridEntry> {
    * @returns A tuple representing the dimensions of the entry.
    */
   private getEntryDimensions(entry: T) {
-    const width = "width" in entry ? entry.width : (entry.radius ?? 0.5) * 2;
-    const height = "height" in entry ? entry.height : (entry.radius ?? 0.5) * 2;
+    const width = 'width' in entry ? entry.width : (entry.radius ?? 0.5) * 2;
+    const height = 'height' in entry ? entry.height : (entry.radius ?? 0.5) * 2;
 
     return [width, height];
   }
@@ -170,7 +170,7 @@ export class Grid<T extends GridEntry> {
    */
   public getEntries(
     point: Point,
-    predicate?: (entry: T) => boolean
+    predicate?: (entry: T) => boolean,
   ): ReadonlySet<T> {
     const [left, right, top, bottom] = this.getDimensions(point);
 
@@ -225,7 +225,7 @@ export class Grid<T extends GridEntry> {
 
     const [left, right, top, bottom] = this.getDimensions(
       entry.coords,
-      ...this.getEntryDimensions(entry)
+      ...this.getEntryDimensions(entry),
     );
 
     for (let y = top; y <= bottom; y++) {
@@ -255,7 +255,7 @@ export class Grid<T extends GridEntry> {
 
     const [left, right, top, bottom] = this.getDimensions(
       entry.coords,
-      ...this.getEntryDimensions(entry)
+      ...this.getEntryDimensions(entry),
     );
 
     let success = false;
@@ -310,10 +310,10 @@ export class Grid<T extends GridEntry> {
     entry: T,
     values: Partial<
       Point &
-      (T extends RectEntry
-        ? { width: number; height: number; }
-        : { radius: number; })
-    >
+        (T extends RectEntry
+          ? { width: number; height: number }
+          : { radius: number })
+    >,
   ) {
     if (!this.#entries.has(entry)) {
       throw new Error(`Cannot update an entry that doesn't exist in the grid.`);
@@ -321,18 +321,18 @@ export class Grid<T extends GridEntry> {
 
     this.remove(entry);
 
-    if (typeof values.x === "number") entry.coords.x = values.x;
-    if (typeof values.y === "number") entry.coords.y = values.y;
+    if (typeof values.x === 'number') entry.coords.x = values.x;
+    if (typeof values.y === 'number') entry.coords.y = values.y;
 
-    if ("width" in values && typeof values.width === "number") {
+    if ('width' in values && typeof values.width === 'number') {
       (entry as RectEntry).width = values.width;
     }
 
-    if ("height" in values && typeof values.height === "number") {
+    if ('height' in values && typeof values.height === 'number') {
       (entry as RectEntry).height = values.height;
     }
 
-    if ("radius" in values && typeof values.radius === "number") {
+    if ('radius' in values && typeof values.radius === 'number') {
       (entry as CircleEntry).radius = values.radius;
     }
 

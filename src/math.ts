@@ -1,5 +1,5 @@
-import { waitFor } from "utils.js";
-import { Vector, Vector2 } from "vector.js";
+import { waitFor } from 'utils.js';
+import { Vector, Vector2 } from 'vector.js';
 
 /**
  * Clamps a number between a minimum and maximum value.
@@ -19,10 +19,10 @@ export function clamp(value: number, min: number, max: number): number {
  * @param value The number to format (supports negative and decimals).
  * @param separator Separator for digit groups (default is ',').
  */
-export function delimitNumber(value: number, separator = ","): string {
-  const sign = value < 0 ? "-" : "";
+export function delimitNumber(value: number, separator = ','): string {
+  const sign = value < 0 ? '-' : '';
   const abs = Math.abs(value);
-  const [int, decimal] = abs.toString().split(".");
+  const [int, decimal] = abs.toString().split('.');
   const groupedInt = int?.replace(/\B(?=(\d{3})+(?!\d))/g, separator);
 
   return sign + (decimal ? `${groupedInt}.${decimal}` : groupedInt);
@@ -49,15 +49,15 @@ export function lerp(start: number, finish: number, factor: number): number {
  */
 export function lerpTo<
   T extends number | Vector,
-  Widen = T extends number ? number : T // annoying ass number literal
+  Widen = T extends number ? number : T, // annoying ass number literal
 >(
   start: T,
   finish: T,
   duration: number,
   onUpdate?: (value: Widen, start: Widen, finish: Widen) => void,
-  interval = 0
+  interval = 0,
 ): Promise<Widen> {
-  let value = (typeof start === "number" ? start : start.clone()) as Widen;
+  let value = (typeof start === 'number' ? start : start.clone()) as Widen;
   const startTime = performance.now();
 
   return waitFor(() => {
@@ -65,7 +65,7 @@ export function lerpTo<
     const factor = Math.min(elapsed / duration, 1);
 
     value = (
-      typeof start === "number"
+      typeof start === 'number'
         ? start + ((finish as number) - start) * factor
         : (value as Vector).copy(start).lerp(finish, factor)
     ) as Widen;

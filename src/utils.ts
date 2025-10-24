@@ -30,16 +30,16 @@ export function sleep(ms: number) {
  */
 export async function waitFor<T>(
   predicate: () => T | Promise<T>,
-  options?: number | WaitForOptions
+  options?: number | WaitForOptions,
 ): Promise<NonNullable<T>> {
   let response = await predicate();
 
   if (response != null) return response;
 
   let timer: ReturnType<typeof setInterval>;
-  const timeout = (typeof options === "object" && options?.timeout) ?? 0;
+  const timeout = (typeof options === 'object' && options?.timeout) ?? 0;
   const interval =
-    (typeof options === "object" ? options?.timeout : options) ?? 0;
+    (typeof options === 'object' ? options?.timeout : options) ?? 0;
 
   return new Promise((resolve, reject) => {
     timer = setInterval(async () => {
@@ -85,10 +85,10 @@ export function getRandomAlphanumeric(lowercase?: boolean) {
 }
 
 const PatternChar: Record<string, (...args: any) => string | number> = {
-  "1": getRandomInt,
+  '1': getRandomInt,
   a: getRandomChar,
   A: getRandomChar,
-  ".": getRandomAlphanumeric,
+  '.': getRandomAlphanumeric,
 };
 
 /**
@@ -104,9 +104,9 @@ const PatternChar: Record<string, (...args: any) => string | number> = {
  */
 export function getRandomString(
   pattern: string,
-  length: number = pattern.replace(/\^/g, "").length
+  length: number = pattern.replace(/\^/g, '').length,
 ): string {
-  let str = "";
+  let str = '';
   let i = 0;
 
   while (str.length < length) {
@@ -114,18 +114,18 @@ export function getRandomString(
 
     if (char === undefined) break;
 
-    if (char === "^") {
+    if (char === '^') {
       const next = pattern[++i];
       if (next !== undefined) str += next;
     } else {
       const fn = PatternChar[char];
-      str += fn ? fn(char === "a") : char;
+      str += fn ? fn(char === 'a') : char;
     }
 
     i++;
   }
 
-  if (str.length < length) str += " ".repeat(length - str.length);
+  if (str.length < length) str += ' '.repeat(length - str.length);
 
   return str;
 }
