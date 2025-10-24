@@ -1,4 +1,4 @@
-export type Point = { x: number; y: number };
+export type Point = { x: number; y: number; };
 
 interface Entry {
   coords: Point;
@@ -22,8 +22,18 @@ interface GridCache<T extends GridEntry> {
   bottom?: number;
   lastX?: number;
   lastY?: number;
-  entries: T[];
+  entries: Set<T>;
   lastCell: Set<T>;
+}
+
+function filterSet<T>(set: Set<T>, predicate: (value: T) => boolean) {
+  const result = new Set<T>();
+
+  for (const value of set) {
+    if (predicate(value)) result.add(value);
+  }
+
+  return result;
 }
 
 /**
@@ -85,10 +95,10 @@ export class Grid<T extends GridEntry> {
    * Clears the internal cache used to optimise repeated queries.
    */
   private resetCache() {
-    const entries = this.#cache.entries ?? [];
+    const entries = this.#cache.entries ?? new Set();
     const lastCell = this.#cache.lastCell ?? new Set();
     lastCell.clear();
-    entries.length = 0;
+    entries.clear();
 
     return (this.#cache = {
       entries: entries,
@@ -161,7 +171,7 @@ export class Grid<T extends GridEntry> {
   public getEntries(
     point: Point,
     predicate?: (entry: T) => boolean
-  ): ReadonlyArray<T> {
+  ): ReadonlySet<T> {
     const [left, right, top, bottom] = this.getDimensions(point);
 
     if (
@@ -171,7 +181,7 @@ export class Grid<T extends GridEntry> {
       this.#cache.bottom === bottom
     ) {
       return predicate
-        ? this.#cache.entries.filter(predicate)
+        ? filterSet(this.#cache.entries, predicate)
         : this.#cache.entries;
     }
 
@@ -197,10 +207,10 @@ export class Grid<T extends GridEntry> {
     this.#cache.right = right;
     this.#cache.top = top;
     this.#cache.bottom = bottom;
-    this.#cache.entries = Array.from(entries);
+    this.#cache.entries = entries;
 
     return predicate
-      ? this.#cache.entries.filter(predicate)
+      ? filterSet(this.#cache.entries, predicate)
       : this.#cache.entries;
   }
 
@@ -300,9 +310,9 @@ export class Grid<T extends GridEntry> {
     entry: T,
     values: Partial<
       Point &
-        (T extends RectEntry
-          ? { width: number; height: number }
-          : { radius: number })
+      (T extends RectEntry
+        ? { width: number; height: number; }
+        : { radius: number; })
     >
   ) {
     if (!this.#entries.has(entry)) {
