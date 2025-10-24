@@ -1,5 +1,5 @@
 import { clamp } from 'math.js';
-import { Vector2, Vector3 } from 'vector.js';
+import { type Vector, Vector2, Vector3 } from 'vector.js';
 
 export interface Bounds2D {
   minX: number;
@@ -335,5 +335,317 @@ export class Sphere implements Shape3D {
     direction.multiply(this.radius / distance);
 
     return direction.add(this.coords);
+  }
+}
+
+/**
+ * Represents a 2D polygon.
+ */
+export class Polygon implements Shape2D {
+  readonly vertices: ReadonlyArray<Vector2>;
+  #signedArea?: number;
+  #bounds?: Readonly<Bounds2D>;
+  #centroid?: Readonly<Vector2>;
+
+  /**
+   * Creates a new 2D polygon.
+   * @param vertices An array containing at least 3 vertices.
+   */
+  constructor(vertices: Vector2[]) {
+    if (vertices.length < 3)
+      throw new Error('A polygon requires at least 3 vertices.');
+
+    this.vertices = vertices;
+  }
+
+  /**
+   * Calculates the area of the polygon using the shoelace formula.
+   *
+   * @param signed If `true` returns the signed area, otherwise returns the absolute area of the polygon.
+   */
+  public calculateArea(signed = false) {
+    const vertices = this.vertices;
+    let area = 0;
+
+    for (let i = 0, j = vertices.length - 1; i < vertices.length; j = i++) {
+      const { x: ax, y: ay } = vertices[i]!;
+      const { x: bx, y: by } = vertices[j]!;
+
+      area += ax * by - bx * ay;
+    }
+
+    area /= 2;
+
+    return signed ? area : Math.abs(area);
+  }
+
+  /**
+   * Calculates the axis-aligned bounding box of the polygon.
+   */
+  public calculateBounds() {
+    let [minX, maxX] = [Infinity, -Infinity];
+    let [minY, maxY] = [Infinity, -Infinity];
+
+    for (const v of this.vertices) {
+      if (v.x < minX) minX = v.x;
+      if (v.y < minY) minY = v.y;
+      if (v.x > maxX) maxX = v.x;
+      if (v.y > maxY) maxY = v.y;
+    }
+
+    return { minX, minY, maxX, maxY };
+  }
+
+  /**
+   * Calculates the geometric centre of the polygon.
+   */
+  public calculateCentroid() {
+    const vertices = this.vertices;
+    let x = 0;
+    let y = 0;
+
+    for (let i = 0, j = vertices.length - 1; i < vertices.length; j = i++) {
+      const { x: ax, y: ay } = vertices[i]!;
+      const { x: bx, y: by } = vertices[j]!;
+      const cross = ax * by - bx * ay;
+
+      x += (ax + bx) * cross;
+      y += (ay + by) * cross;
+    }
+
+    const f = 1 / (6 * this.signedArea);
+
+    return new Vector2(x * f, y * f);
+  }
+
+  /**
+   * The absolute area of the polygon.
+   */
+  public get area() {
+    return Math.abs(this.signedArea);
+  }
+
+  /**
+   * The signed area of the polygon.
+   */
+  public get signedArea() {
+    return (this.#signedArea ??= this.calculateArea(true));
+  }
+
+  /**
+   * The axis-aligned bounding box of the polygon.
+   */
+  public get bounds() {
+    return (this.#bounds ??= Object.freeze(this.calculateBounds()));
+  }
+
+  /**
+   * The geometric centre of the polygon.
+   */
+  public get centroid() {
+    return (this.#centroid ??= Object.freeze(this.calculateCentroid()));
+  }
+
+  /**
+   * Returns a deep clone of the polygon.
+   */
+  public clone() {
+    return new Polygon(this.vertices.map((v) => new Vector2(v.x, v.y)));
+  }
+
+  /**
+   * Checks if a point (x, y) lies within the polygon using the ray-casting algorithm.
+   * @param x The x coordinate of the point.
+   * @param y The y coordinate of the point.
+   */
+  public contains(x: number, y: number) {
+    const vertices = this.vertices;
+    let inside = false;
+
+    for (let i = 0, j = vertices.length - 1; i < vertices.length; j = i++) {
+      const { x: ax, y: ay } = vertices[i]!;
+      const { x: bx, y: by } = vertices[j]!;
+
+      const intersect =
+        ay > y !== by > y &&
+        x < ((bx - ax) * (y - ay)) / (by - ay || Number.EPSILON) + ax;
+
+      if (intersect) inside = !inside;
+    }
+
+    return inside;
+  }
+
+  /**
+   * Returns the closest point on the polygon's edges to a given point.
+   * @param point The point to project onto the polygon.
+   */
+  public closestPoint(point: Vector) {
+    const closestPoint = new Vector2();
+    const edgeVector = new Vector2();
+    const pointVector = new Vector2();
+    const projectedPoint = new Vector2();
+    const vertices = this.vertices;
+    let minDistanceSq = Infinity;
+
+    for (let i = 0, j = vertices.length - 1; i < vertices.length; j = i++) {
+      const startVertex = vertices[j]!;
+      const endVertex = vertices[i]!;
+
+      edgeVector.x = endVertex.x - startVertex.x;
+      edgeVector.y = endVertex.y - startVertex.y;
+
+      pointVector.x = point.x - startVertex.x;
+      pointVector.y = point.y - startVertex.y;
+
+      const factor = clamp(
+        pointVector.dot(edgeVector) / edgeVector.lengthSquared(),
+        0,
+        1,
+      );
+
+      projectedPoint.x = startVertex.x + edgeVector.x * factor;
+      projectedPoint.y = startVertex.y + edgeVector.y * factor;
+
+      const distanceSq = projectedPoint.distanceSquared(point);
+
+      if (distanceSq < minDistanceSq) {
+        minDistanceSq = distanceSq;
+        closestPoint.copy(projectedPoint);
+      }
+    }
+
+    return closestPoint;
+  }
+}
+
+/**
+ * Represents a 3D prism formed by extruding a 2D polygon along the Z axis.
+ */
+export class Prism {
+  /**
+   * Creates a rectangular prism defined by its base position and size.
+   * The prism extends along the x, y, and z axes from the specified base point.
+   *
+   * @param origin The base position of the prism.
+   * @param width  The length of the prism along the X axis.
+   * @param depth  The length of the prism along the Y axis.
+   * @param height The length of the prism along the Z axis.
+   */
+  static createCuboid(
+    origin: Vector3,
+    width: number,
+    depth: number,
+    height: number,
+  ) {
+    let { x, y, z } = origin;
+
+    if (height < 0) {
+      z += height;
+      height = Math.abs(height);
+    }
+
+    const vertices = [
+      new Vector2(x, y),
+      new Vector2(x + width, y),
+      new Vector2(x + width, y + depth),
+      new Vector2(x, y + depth),
+    ];
+
+    return new Prism(vertices, height, z);
+  }
+
+  readonly z: number;
+  readonly height: number;
+  readonly polygon: Polygon;
+  #bounds?: Readonly<Bounds3D>;
+  #centroid?: Readonly<Vector3>;
+
+  /**
+   * Creates a new extruded polygon.
+   * @param vertices An array containing at least 3 vertices.
+   * @param height The height of the extruded polygon's extrusion.
+   * @param z The position of the extruded polygon's base.
+   */
+  constructor(vertices: Vector2[], height: number, z: number) {
+    if (height <= 0) throw new Error('Height must be positive number.');
+
+    this.polygon = new Polygon(vertices);
+    this.z = z;
+    this.height = height;
+  }
+
+  /**
+   * The axis-aligned bounding box of the extruded polygon.
+   */
+  public get bounds() {
+    return (this.#bounds ??= Object.freeze(this.calculateBounds()));
+  }
+
+  /**
+   * The geometric centre of the extruded polygon.
+   */
+  public get centroid() {
+    return (this.#centroid ??= Object.freeze(this.calculateCentroid()));
+  }
+
+  /**
+   * The volume of the extruded polygon.
+   */
+  public get volume() {
+    return this.polygon.area * this.height;
+  }
+
+  /**
+   * Returns a deep clone of the extruded polygon.
+   */
+  public clone() {
+    return new Prism(
+      this.polygon.vertices.map((v) => new Vector2(v.x, v.y)),
+      this.height,
+      this.z,
+    );
+  }
+
+  /**
+   * Calculates the axis-aligned bounding box of the extruded polygon.
+   */
+  public calculateBounds() {
+    const bounds = this.polygon.calculateBounds() as Bounds3D;
+    bounds.minZ = this.z;
+    bounds.maxZ = this.z + this.height;
+
+    return bounds;
+  }
+
+  /**
+   * Calculates the geometric centre of the extruded polygon.
+   */
+  public calculateCentroid() {
+    const { x, y } = this.polygon.calculateCentroid();
+    return new Vector3(x, y, this.z + this.height / 2);
+  }
+
+  /**
+   * Checks if a point (x, y, z) lies within the extruded polygon.
+   * @param x The x coordinate of the point.
+   * @param y The y coordinate of the point.
+   * @param z The z coordinate of the point.
+   */
+  public contains(x: number, y: number, z: number) {
+    if (z < this.z || z > this.z + this.height) return false;
+
+    return this.polygon.contains(x, y);
+  }
+
+  /**
+   * Returns the closest point on the prism's surface to a given point.
+   * @param point The 3D point to project onto the prism.
+   */
+  public closestPoint(point: Vector3) {
+    const [x, y] = this.polygon.closestPoint(point);
+    const z = clamp(point.z, this.z, this.z + this.height);
+
+    return new Vector3(x, y, z);
   }
 }
