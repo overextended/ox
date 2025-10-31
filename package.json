@@ -18,7 +18,8 @@
   ],
   "type": "module",
   "scripts": {
+    "build": "tsc --build --clean && tsc --build",
     "format": "bunx prettier . --write",
-    "release": "bun format && tsc && bun standard-version --skip.changelog && bun publish"
+    "release": "bun format && bun run build && bun standard-version --skip.changelog && bun publish"
   }
 }
