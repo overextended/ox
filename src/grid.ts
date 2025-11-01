@@ -1,19 +1,13 @@
-export type Point = { x: number; y: number };
-
-interface Entry {
-  coords: Point;
+export interface GridEntry {
+  /** Horizontal world space coordinate of the entry. */
+  x: number;
+  /** Vertical world space coordinate of the entry. */
+  y: number;
+  /** Width of the entry, defaulting to grid cell width. */
+  width?: number;
+  /** Height of the entry, defaulting to grid cell height. */
+  height?: number;
 }
-
-export interface RectEntry extends Entry {
-  width: number;
-  height: number;
-}
-
-export interface CircleEntry extends Entry {
-  radius: number;
-}
-
-export type GridEntry = RectEntry | CircleEntry;
 
 interface GridCache<T extends GridEntry> {
   left?: number;
@@ -37,12 +31,14 @@ function filterSet<T>(set: Set<T>, predicate: (value: T) => boolean) {
 }
 
 /**
- * A 2D spatial grid for efficiently indexing and querying objects within a space.
+ * A 2D spatial grid for efficiently indexing and querying objects in a space.
  */
 export class Grid<T extends GridEntry> {
   #rows = new Map<number, Map<number, Set<T>>>();
-  #entries = new Set<T>();
   #cache = {} as GridCache<T>;
+
+  /** All registered entries in the grid. Should not be directly modified. */
+  readonly entries = new Set<T>();
 
   constructor(
     readonly cellWidth: number = 128,
@@ -52,43 +48,29 @@ export class Grid<T extends GridEntry> {
   }
 
   /**
-   * Calculates the grid cell boundaries that a rectangle (centreed at `point`)
-   * with the given width and height spans.
+   * Calculates the grid cell boundaries occupied by a rectangle.
    *
-   * @param point The centre point in world coordinates.
+   * @param wx The x-coordinate to convert to grid space.
+   * @param wy The y-coordinate to convert to grid space.
    * @param width The width of the rectangle (optional, defaults to cellWidth).
    * @param height The height of the rectangle (optional, defaults to cellHeight).
    * @returns A tuple representing grid cell indices.
    */
   private getDimensions(
-    point: Point,
-    width?: number,
-    height?: number,
+    wx: number,
+    wy: number,
+    width = this.cellWidth,
+    height = this.cellHeight,
   ): [number, number, number, number] {
-    const halfWidth = (width ?? this.cellWidth) / 2;
-    const halfHeight = (height ?? this.cellHeight) / 2;
+    const halfWidth = width / 2;
+    const halfHeight = height / 2;
 
-    const left = Math.floor((point.x - halfWidth) / this.cellWidth);
-    const right = Math.floor((point.x + halfWidth) / this.cellWidth);
-    const top = Math.floor((point.y - halfHeight) / this.cellHeight);
-    const bottom = Math.floor((point.y + halfHeight) / this.cellHeight);
+    const left = Math.floor((wx - halfWidth) / this.cellWidth);
+    const right = Math.floor((wx + halfWidth) / this.cellWidth);
+    const top = Math.floor((wy - halfHeight) / this.cellHeight);
+    const bottom = Math.floor((wy + halfHeight) / this.cellHeight);
 
     return [left, right, top, bottom];
-  }
-
-  /**
-   * Returns the width and height of an entry.
-   *
-   * If the entry is a rectangle, uses its `width` and `height` properties.
-   * If the entry is a circle, calculates diameter from its `radius`.
-   * @param entry The grid entry to calculate dimensions for.
-   * @returns A tuple representing the dimensions of the entry.
-   */
-  private getEntryDimensions(entry: T) {
-    const width = 'width' in entry ? entry.width : (entry.radius ?? 0.5) * 2;
-    const height = 'height' in entry ? entry.height : (entry.radius ?? 0.5) * 2;
-
-    return [width, height];
   }
 
   /**
@@ -107,17 +89,10 @@ export class Grid<T extends GridEntry> {
   }
 
   /**
-   * Returns the number of entries in the grid.
-   */
-  public get size() {
-    return this.#entries.size;
-  }
-
-  /**
-   * Converts world-space coordinates to grid-space indices.
+   * Converts world space coordinates to grid-space indices.
    *
-   * @param wx The `x` position in world-space.
-   * @param wy The `y` position in world-space.
+   * @param wx The `x` position in world space.
+   * @param wy The `y` position in world space.
    * @returns A tuple representing the grid cell indices.
    */
   public getGridPosition(wx: number, wy: number): [number, number] {
@@ -128,30 +103,31 @@ export class Grid<T extends GridEntry> {
   }
 
   /**
-   * Converts grid-space indices to world-space coordinates.
-   * @param x The horizontal grid-space index (column).
-   * @param y The vertical grid-space index (row).
+   * Converts grid-space indices to world space coordinates.
+   * @param gx The horizontal grid-space index (column).
+   * @param gy The vertical grid-space index (row).
    * @returns A tuple representing the centre of the grid cell in world space.
    */
-  public getWorldPosition(x: number, y: number): [number, number] {
-    const wx = x * this.cellWidth + 0.5 * this.cellWidth;
-    const wy = y * this.cellHeight + 0.5 * this.cellHeight;
+  public getWorldPosition(gx: number, gy: number): [number, number] {
+    const wx = gx * this.cellWidth + 0.5 * this.cellWidth;
+    const wy = gy * this.cellHeight + 0.5 * this.cellHeight;
 
     return [wx, wy];
   }
 
   /**
-   * Retrieves the grid cell containing the given point.
-   * @param point The world-space position to check within the grid.
+   * Retrieves the set of entries in the cell containing the specified world coordinates.
+   * @param wx The `x` position in world space.
+   * @param wy The `y` position in world space.
    * @returns A read-only set of entries in the cell.
    */
-  public getCell(point: Point): ReadonlySet<T> {
-    const [x, y] = this.getGridPosition(point.x, point.y);
+  public getCell(wx: number, wy: number): ReadonlySet<T> {
+    const [gx, gy] = this.getGridPosition(wx, wy);
 
-    if (this.#cache.lastX !== x || this.#cache.lastY !== y) {
-      this.#cache.lastX = x;
-      this.#cache.lastY = y;
-      this.#cache.lastCell = this.#rows.get(y)?.get(x) || new Set();
+    if (this.#cache.lastX !== gx || this.#cache.lastY !== gy) {
+      this.#cache.lastX = gx;
+      this.#cache.lastY = gy;
+      this.#cache.lastCell = this.#rows.get(gy)?.get(gx) || new Set();
     }
 
     const cell = this.#cache.lastCell;
@@ -160,19 +136,18 @@ export class Grid<T extends GridEntry> {
   }
 
   /**
-   * Computes all entries intersecting the bounds around a point.
-   * Optionally filters the result using a predicate.
-   *
-   * Uses a bounding box based on the entry's dimensions.
-   * @param point The centre point of the search.
+   * Retrieves all entries occupying the same or neighbouring grid cells around a point.
+   * @param wx The `x` position in world space.
+   * @param wy The `y` position in world space.
    * @param predicate An optional filter applied to the entries.
-   * @returns A read-only array of matching entries.
+   * @returns A read-only set of matching entries.
    */
   public getEntries(
-    point: Point,
+    wx: number,
+    wy: number,
     predicate?: (entry: T) => boolean,
   ): ReadonlySet<T> {
-    const [left, right, top, bottom] = this.getDimensions(point);
+    const [left, right, top, bottom] = this.getDimensions(wx, wy);
 
     if (
       this.#cache.left === left &&
@@ -219,13 +194,15 @@ export class Grid<T extends GridEntry> {
    * @param entry A new object to add to the grid.
    */
   public add(entry: T) {
-    if (this.#entries.has(entry)) {
+    if (this.entries.has(entry)) {
       throw new Error(`Entry already exists in the grid.`);
     }
 
     const [left, right, top, bottom] = this.getDimensions(
-      entry.coords,
-      ...this.getEntryDimensions(entry),
+      entry.x,
+      entry.y,
+      entry.width,
+      entry.height,
     );
 
     for (let y = top; y <= bottom; y++) {
@@ -243,7 +220,7 @@ export class Grid<T extends GridEntry> {
     }
 
     this.resetCache();
-    this.#entries.add(entry);
+    this.entries.add(entry);
   }
 
   /**
@@ -251,11 +228,13 @@ export class Grid<T extends GridEntry> {
    * @param entry An existing grid entry.
    */
   public remove(entry: T) {
-    if (!this.#entries.has(entry)) return false;
+    if (!this.entries.has(entry)) return false;
 
     const [left, right, top, bottom] = this.getDimensions(
-      entry.coords,
-      ...this.getEntryDimensions(entry),
+      entry.x,
+      entry.y,
+      entry.width,
+      entry.height,
     );
 
     let success = false;
@@ -280,7 +259,7 @@ export class Grid<T extends GridEntry> {
 
     if (success) {
       this.resetCache();
-      this.#entries.delete(entry);
+      this.entries.delete(entry);
     }
 
     return success;
@@ -306,55 +285,19 @@ export class Grid<T extends GridEntry> {
    * Updates the position and dimensions of an existing entry in the grid.
    * @param entry The entry to update.
    */
-  public update(
-    entry: T,
-    values: Partial<
-      Point &
-        (T extends RectEntry
-          ? { width: number; height: number }
-          : { radius: number })
-    >,
-  ) {
-    if (!this.#entries.has(entry)) {
+  public update(entry: T, { x, y, width, height }: GridEntry) {
+    if (!this.entries.has(entry)) {
       throw new Error(`Cannot update an entry that doesn't exist in the grid.`);
     }
 
     this.remove(entry);
 
-    if (typeof values.x === 'number') entry.coords.x = values.x;
-    if (typeof values.y === 'number') entry.coords.y = values.y;
-
-    if ('width' in values && typeof values.width === 'number') {
-      (entry as RectEntry).width = values.width;
-    }
-
-    if ('height' in values && typeof values.height === 'number') {
-      (entry as RectEntry).height = values.height;
-    }
-
-    if ('radius' in values && typeof values.radius === 'number') {
-      (entry as CircleEntry).radius = values.radius;
-    }
+    if (typeof x === 'number') entry.x = x;
+    if (typeof y === 'number') entry.y = y;
+    if (typeof width === 'number') entry.width = width;
+    if (typeof height === 'number') entry.height = height;
 
     this.add(entry);
-  }
-
-  /**
-   * Checks if an object is an entry in the grid.
-   * @param entry The object to check.
-   */
-  public has(entry: T) {
-    return this.#entries.has(entry);
-  }
-
-  /** Returns a iterable set of all entries in the grid. */
-  public entries() {
-    return this.#entries.values();
-  }
-
-  /** Returns an array of all entries in the grid. */
-  public toArray() {
-    return Array.from(this.#entries);
   }
 
   /**
@@ -362,7 +305,7 @@ export class Grid<T extends GridEntry> {
    */
   public clear() {
     this.#rows.clear();
-    this.#entries.clear();
+    this.entries.clear();
     this.resetCache();
   }
 }
