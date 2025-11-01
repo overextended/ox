@@ -1,5 +1,5 @@
 import { waitFor } from 'utils.js';
-import { Vector, Vector2 } from 'vector.js';
+import { Vector } from 'vector.js';
 
 /**
  * Clamps a number between a minimum and maximum value.
