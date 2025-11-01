@@ -1,6 +1,15 @@
 import { clamp } from 'math.js';
 import { type Vector, Vector2, Vector3 } from 'vector.js';
 
+export interface Point2D {
+  x: number;
+  y: number;
+}
+
+export interface Point3D extends Point2D {
+  z: number;
+}
+
 export interface Bounds2D {
   minX: number;
   maxX: number;

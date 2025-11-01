@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'bun:test';
-import { Polygon, Prism } from '../src/shapes.js';
+import { Polygon, Prism } from '../src/geometry.js';
 import { Vector2, Vector3 } from '../src/vector.js';
 
 describe('Polygon', () => {
