@@ -463,13 +463,15 @@ export class Polygon implements Shape2D {
 
         if (Polygon.cross(a, b, c) > 0) {
           let isEar = true;
-          const triangle = [a, b, c];
+          const triangle = new Polygon([a, b, c]);
 
           for (let j = 0; j < indices.length; j++) {
             const idx = indices[j]!;
 
             if (idx !== i1 && idx !== i2 && idx !== i3) {
-              if (triangle.includes(this.vertices[idx]!)) {
+              const { x, y } = this.vertices[idx]!;
+
+              if (triangle.contains(x, y)) {
                 isEar = false;
                 break;
               }
