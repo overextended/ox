@@ -355,6 +355,7 @@ export class Polygon implements Shape2D {
   #signedArea?: number;
   #bounds?: Readonly<Bounds2D>;
   #centroid?: Readonly<Vector2>;
+  #triangles?: ReadonlyArray<[Vector2, Vector2, Vector2]>;
 
   /**
    * Creates a new 2D polygon.
@@ -427,6 +428,72 @@ export class Polygon implements Shape2D {
     return new Vector2(x * f, y * f);
   }
 
+  public calculateTriangles() {
+    const triangles: [Vector2, Vector2, Vector2][] = [];
+
+    if (this.isConvex()) {
+      for (let i = 1; i < this.vertices.length - 1; i++) {
+        triangles.push([
+          this.vertices[0]!,
+          this.vertices[i]!,
+          this.vertices[i + 1]!,
+        ]);
+      }
+
+      return triangles;
+    }
+
+    const indices = [];
+    const reverse = this.signedArea < 0;
+
+    for (let i = 0; i < this.vertices.length; i++) {
+      indices[i] = reverse ? this.vertices.length - i - 1 : i;
+    }
+
+    while (indices.length > 2) {
+      let foundEar = false;
+
+      for (let i = 0; i < indices.length; i++) {
+        const i1 = indices[(i - 1 + indices.length) % indices.length]!;
+        const i2 = indices[i]!;
+        const i3 = indices[(i + 1) % indices.length]!;
+        const a = this.vertices[i1]!;
+        const b = this.vertices[i2]!;
+        const c = this.vertices[i3]!;
+
+        if (Polygon.cross(a, b, c) > 0) {
+          let isEar = true;
+          const triangle = [a, b, c];
+
+          for (let j = 0; j < indices.length; j++) {
+            const idx = indices[j]!;
+
+            if (idx !== i1 && idx !== i2 && idx !== i3) {
+              if (triangle.includes(this.vertices[idx]!)) {
+                isEar = false;
+                break;
+              }
+            }
+          }
+
+          if (isEar) {
+            triangles.push([a, b, c]);
+            indices.splice(i, 1);
+
+            foundEar = true;
+            break;
+          }
+        }
+      }
+
+      if (!foundEar) {
+        break;
+      }
+    }
+
+    return triangles;
+  }
+
   /**
    * The absolute area of the polygon.
    */
@@ -453,6 +520,10 @@ export class Polygon implements Shape2D {
    */
   public get centroid() {
     return (this.#centroid ??= Object.freeze(this.calculateCentroid()));
+  }
+
+  public get triangles() {
+    return (this.#triangles ??= Object.freeze(this.calculateTriangles()));
   }
 
   /**
@@ -525,6 +596,41 @@ export class Polygon implements Shape2D {
     }
 
     return closestPoint;
+  }
+
+  /**
+   * Calculates the cross product of three points.
+   */
+  public static cross(a: Vector2, b: Vector2, c: Vector2) {
+    return (b.x - a.x) * (c.y - a.y) - (b.y - a.y) * (c.x - a.x);
+  }
+
+  /**
+   * Determines if the polygon is convex.
+   */
+  public isConvex() {
+    const vertices = this.vertices;
+    const n = vertices.length;
+    let sign = 0;
+
+    for (let i = 0; i < n; i++) {
+      const a = vertices[i]!;
+      const b = vertices[(i + 1) % n]!;
+      const c = vertices[(i + 2) % n]!;
+      const cross = Polygon.cross(a, b, c);
+
+      if (cross !== 0) {
+        const currentSign = cross > 0 ? 1 : -1;
+
+        if (sign === 0) {
+          sign = currentSign;
+        } else if (sign !== currentSign) {
+          return false;
+        }
+      }
+
+      return true;
+    }
   }
 }
 
