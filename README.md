@@ -20,8 +20,8 @@ npm install @overextended/core
 ## Example
 
 ```ts
-import { Sphere } from '@overextended/core/geometry.js';
-import { Vector3 } from '@overextended/core/vector.js';
+import { Sphere } from '@overextended/core/geometry';
+import { Vector3 } from '@overextended/core/vector';
 
 const position = new Vector3(0, 0, 0);
 const planet = new Sphere(position, 6371);

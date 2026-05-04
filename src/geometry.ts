@@ -1,5 +1,5 @@
-import { clamp } from 'math.js';
-import { type Vector, Vector2, Vector3 } from 'vector.js';
+import { clamp } from './math.js';
+import { type Vector, Vector2, Vector3 } from './vector.js';
 
 export interface Point2D {
   x: number;

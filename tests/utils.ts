@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'bun:test';
 import { waitFor } from '../src/utils.js';
-import { getRandomString } from '../src/random.js';
+import { getRandomString } from '../src/utils.js';
 
 describe('getRandomString', () => {
   it('generates string matching the pattern', () => {
