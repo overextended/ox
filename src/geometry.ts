@@ -132,10 +132,10 @@ export class Cylinder implements Shape3D {
 
   /**
    * Creates a new cylinder.
-   * @param coords The centre of the cylinder's base.
+   * @param coords The centre position of the cylinder.
    * @param radius The radius of the cylinder.
    * @param height The height of the cylinder.
-   * @param z The Z coordinate of the base.
+   * @param z The centre Z position of the cylinder.
    */
   constructor(coords: Vector2, radius: number, height: number, z: number) {
     if (height <= 0) throw new Error('Height must be positive number.');
@@ -149,13 +149,12 @@ export class Cylinder implements Shape3D {
    * Calculates the axis-aligned bounding box of the cylinder.
    */
   public calculateBounds() {
-    const bounds2D = this.circle.calculateBounds();
+    const bounds = this.circle.calculateBounds() as Bounds3D;
+    const half = this.height / 2;
+    bounds.minZ = this.z - half;
+    bounds.maxZ = this.z + half;
 
-    return {
-      ...bounds2D,
-      minZ: this.z,
-      maxZ: this.z + this.height,
-    };
+    return bounds;
   }
 
   /**
@@ -163,7 +162,7 @@ export class Cylinder implements Shape3D {
    */
   public calculateCentroid() {
     const { x, y } = this.circle.centroid;
-    return new Vector3(x, y, this.z + this.height / 2);
+    return new Vector3(x, y, this.z);
   }
 
   /**
@@ -194,8 +193,11 @@ export class Cylinder implements Shape3D {
    * @param z The z coordinate of the point.
    */
   public contains(x: number, y: number, z?: number) {
-    if (z !== undefined && (z < this.z || z > this.z + this.height))
+    const half = this.height / 2;
+
+    if (z !== undefined && (z < this.z - half || z > this.z + half))
       return false;
+
     return this.circle.contains(x, y);
   }
 
@@ -230,7 +232,8 @@ export class Cylinder implements Shape3D {
       direction.add(this.circle.coords);
     }
 
-    const z = clamp(point.z, this.z, this.z + this.height);
+    const half = this.height / 2;
+    const z = clamp(point.z, this.z - half, this.z + half);
 
     return new Vector3(direction.x, direction.y, z);
   }
@@ -661,33 +664,47 @@ export class Polygon implements Shape2D {
  */
 export class Prism {
   /**
-   * Creates a rectangular prism defined by its base position and size.
-   * The prism extends along the x, y, and z axes from the specified base point.
+   * Creates a rectangular prism extending out from the origin coordinates.
    *
-   * @param origin The base position of the prism.
+   * @param origin The centre position of the prism.
    * @param width  The length of the prism along the X axis.
    * @param depth  The length of the prism along the Y axis.
    * @param height The length of the prism along the Z axis.
+   * @param heading Rotation of the prism in degrees.
    */
   static createCuboid(
     origin: Vector3,
     width: number,
     depth: number,
     height: number,
+    heading = 0,
   ) {
     let { x, y, z } = origin;
-
-    if (height < 0) {
-      z += height;
-      height = Math.abs(height);
-    }
+    const hw = width / 2;
+    const hd = depth / 2;
 
     const vertices = [
-      new Vector2(x, y),
-      new Vector2(x + width, y),
-      new Vector2(x + width, y + depth),
-      new Vector2(x, y + depth),
+      new Vector2(x - hw, y - hd),
+      new Vector2(x + hw, y - hd),
+      new Vector2(x + hw, y + hd),
+      new Vector2(x - hw, y + hd),
     ];
+
+    if (heading) {
+      const rad = (heading * Math.PI) / 180;
+      const cos = Math.cos(rad);
+      const sin = Math.sin(rad);
+
+      vertices.forEach((v) => {
+        const dx = v.x - x;
+        const dy = v.y - y;
+
+        v.x = x + dx * cos - dy * sin;
+        v.y = y + dx * sin + dy * cos;
+      });
+    }
+
+    height = Math.abs(height);
 
     return new Prism(vertices, height, z);
   }
@@ -701,8 +718,8 @@ export class Prism {
   /**
    * Creates a new extruded polygon.
    * @param vertices An array containing at least 3 vertices.
-   * @param height The height of the extruded polygon's extrusion.
-   * @param z The position of the extruded polygon's base.
+   * @param height Total height of the prism.
+   * @param z The centre Z position of the prism.
    */
   constructor(vertices: Vector2[], height: number, z: number) {
     if (height <= 0) throw new Error('Height must be positive number.');
@@ -749,8 +766,9 @@ export class Prism {
    */
   public calculateBounds() {
     const bounds = this.polygon.calculateBounds() as Bounds3D;
-    bounds.minZ = this.z;
-    bounds.maxZ = this.z + this.height;
+    const half = this.height / 2;
+    bounds.minZ = this.z - half;
+    bounds.maxZ = this.z + half;
 
     return bounds;
   }
@@ -760,7 +778,7 @@ export class Prism {
    */
   public calculateCentroid() {
     const { x, y } = this.polygon.calculateCentroid();
-    return new Vector3(x, y, this.z + this.height / 2);
+    return new Vector3(x, y, this.z);
   }
 
   /**
@@ -770,7 +788,9 @@ export class Prism {
    * @param z The z coordinate of the point.
    */
   public contains(x: number, y: number, z: number) {
-    if (z < this.z || z > this.z + this.height) return false;
+    const half = this.height / 2;
+
+    if (z < this.z - half || z > this.z + half) return false;
 
     return this.polygon.contains(x, y);
   }
@@ -781,7 +801,8 @@ export class Prism {
    */
   public closestPoint(point: Vector3) {
     const [x, y] = this.polygon.closestPoint(point);
-    const z = clamp(point.z, this.z, this.z + this.height);
+    const half = this.height / 2;
+    const z = clamp(point.z, this.z - half, this.z + half);
 
     return new Vector3(x, y, z);
   }
