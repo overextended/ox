@@ -443,14 +443,12 @@ export class Polygon implements Shape2D {
       return triangles;
     }
 
-    const indices = [];
-    const reverse = this.signedArea < 0;
+    const isCCW = this.signedArea > 0;
+    const indices = Array.from({ length: this.vertices.length }, (_, i) =>
+      isCCW ? this.vertices.length - 1 - i : i,
+    );
 
-    for (let i = 0; i < this.vertices.length; i++) {
-      indices[i] = reverse ? this.vertices.length - i - 1 : i;
-    }
-
-    while (indices.length > 2) {
+    while (true) {
       let foundEar = false;
 
       for (let i = 0; i < indices.length; i++) {
@@ -460,35 +458,57 @@ export class Polygon implements Shape2D {
         const a = this.vertices[i1]!;
         const b = this.vertices[i2]!;
         const c = this.vertices[i3]!;
+        const cross = Polygon.cross(a, b, c);
 
-        if (Polygon.cross(a, b, c) > 0) {
-          let isEar = true;
-          const triangle = new Polygon([a, b, c]);
+        if (cross <= 0) continue;
 
-          for (let j = 0; j < indices.length; j++) {
-            const idx = indices[j]!;
+        let isEar = true;
 
-            if (idx !== i1 && idx !== i2 && idx !== i3) {
-              const { x, y } = this.vertices[idx]!;
+        for (let j = 0; j < indices.length; j++) {
+          const idx = indices[j]!;
 
-              if (triangle.contains(x, y)) {
-                isEar = false;
-                break;
-              }
-            }
-          }
+          if (idx === i1 || idx === i2 || idx === i3) continue;
 
-          if (isEar) {
-            triangles.push([a, b, c]);
-            indices.splice(i, 1);
+          const p = this.vertices[idx]!;
+          const c1 = Polygon.cross(a, b, p);
+          const c2 = Polygon.cross(b, c, p);
+          const c3 = Polygon.cross(c, a, p);
+          const hasNeg = c1 < 0 || c2 < 0 || c3 < 0;
+          const hasPos = c1 > 0 || c2 > 0 || c3 > 0;
+          const pointInTriangle = !(hasNeg && hasPos);
 
-            foundEar = true;
+          if (pointInTriangle) {
+            isEar = false;
             break;
           }
+        }
+
+        if (isEar) {
+          foundEar = true;
+
+          triangles.push([a, b, c]);
+          indices.splice(i, 1);
+          break;
         }
       }
 
       if (!foundEar) {
+        console.error(
+          'Triangulation failed: possible non-simple or degenerate polygon',
+        );
+
+        break;
+      }
+
+      if (indices.length === 3) {
+        const [i1, i2, i3] = indices;
+
+        triangles.push([
+          this.vertices[i1!]!,
+          this.vertices[i2!]!,
+          this.vertices[i3!]!,
+        ]);
+
         break;
       }
     }
@@ -630,9 +650,9 @@ export class Polygon implements Shape2D {
           return false;
         }
       }
-
-      return true;
     }
+
+    return true;
   }
 }
 
