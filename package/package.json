@@ -19,7 +19,8 @@
   },
   "type": "module",
   "sideEffects": [
-    "./common/locale/index.js"
+    "./common/locale/index.js",
+    "./dist/client/index.js"
   ],
   "exports": {
     ".": {

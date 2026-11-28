@@ -239,6 +239,57 @@ else
     end
 end
 
+---https://github.com/citizenfx/fivem/pull/3590 (:
+if lib.context == 'client' and cache.game == 'fivem' and GetEntitiesInRadius(0.0, 0.0, 0.0, 0.0, 1, false, {}) == nil then
+    local pools = { 'CPed', 'CVehicle', 'CObject' }
+
+    ---@param x number
+    ---@param y number
+    ---@param z number
+    ---@param radius number
+    ---@param entityType number
+    ---@param sortByDistance boolean
+    ---@param models? number[]
+    ---@return number[]
+    function GetEntitiesInRadius(x, y, z, radius, entityType, sortByDistance, models)
+        local pool = pools[entityType]
+        local handles = {}
+
+        if not pool then return handles end
+
+        local allowedModels
+
+        if models and #models > 0 then
+            allowedModels = {}
+
+            for i = 1, #models do
+                allowedModels[models[i]] = true
+            end
+        end
+
+        local coords = vector3(x, y, z)
+        local distances = sortByDistance and {} or nil
+        local entities = GetGamePool(pool)
+
+        for i = 1, #entities do
+            local handle = entities[i]
+            local distance = #(GetEntityCoords(handle, false) - coords)
+
+            if distance < radius and (not allowedModels or allowedModels[GetEntityModel(handle)]) then
+                handles[#handles + 1] = handle
+
+                if distances then distances[handle] = distance end
+            end
+        end
+
+        if distances then
+            table.sort(handles, function(a, b) return distances[a] < distances[b] end)
+        end
+
+        return handles
+    end
+end
+
 load(LoadResourceFile(lib.name, 'require.lua'), '@@ox_lib/require.lua')()
 
 for i = 1, GetNumResourceMetadata(cache.resource, 'ox_lib') do
@@ -250,4 +301,3 @@ for i = 1, GetNumResourceMetadata(cache.resource, 'ox_lib') do
         if type(module) == 'function' then pcall(module) end
     end
 end
-
