@@ -15,6 +15,7 @@ local isServer = lib.context == 'server'
 ---@field new PedConstructor
 local Ped = Class('Ped', GameEntity)
 Ped.type = Ped.__name
+Ped.fromHandle = GameEntity.bindFromHandle(Ped)
 
 ---@param model string | number
 ---@param x number

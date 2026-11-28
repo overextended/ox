@@ -54,7 +54,7 @@ AddStateBagChangeHandler('ox_entity_setonground', '', function(bag, key, value)
         return not IsEntityWaitingForWorldCollision(handle) and true or nil
     end)
 
-    local entity = IsEntityAVehicle(handle) and Vehicle:new(handle) or Prop:new(handle)
+    local entity = IsEntityAVehicle(handle) and Vehicle.fromHandle(handle) or Prop.fromHandle(handle)
 
     if IsEntityInAir(handle) then
         local coords = GetEntityCoords(handle)

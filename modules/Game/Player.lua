@@ -21,6 +21,7 @@ local Character = isServer and require 'Ox.Character' or nil
 ---@field create nil
 local Player = Class('Player', Ped)
 Player.type = Player.__name
+Player.fromHandle = Ped.bindFromHandle(Player)
 
 local players = setmetatable({}, {
     __mode = 'v',

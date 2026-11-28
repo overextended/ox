@@ -10,6 +10,7 @@
 
 local isServer = lib.context == 'server'
 local allowStateBagReplication = isServer or not GetConvarBool('sv_stateBagStrictMode', false)
+local instancesByClass = setmetatable({}, { __mode = 'k' })
 
 ---@class GameEntity : OxClass
 ---@field handle number The entity's script handle.
@@ -32,6 +33,33 @@ function GameEntity:__index(index)
     end
 
     return GameEntity[index]
+end
+
+local function fromHandle(self, handle)
+    local instances = instancesByClass[self]
+
+    if not instances then
+        instances = setmetatable({}, { __mode = 'v' })
+        instancesByClass[self] = instances
+    end
+
+    local entity = instances[handle]
+
+    if entity and entity.handle == handle and entity:isValid() then return entity end
+
+    instances[handle] = nil
+    entity = self:new(handle)
+
+    instances[handle] = entity
+    return entity
+end
+
+---Binds a class's cached entity lookup.
+---@generic T : GameEntity
+---@param class T
+---@return fun(handle: number): T
+function GameEntity.bindFromHandle(class)
+    return function(handle) return fromHandle(class, handle) end
 end
 
 ---@alias StateBagReplication
@@ -138,6 +166,13 @@ function GameEntity:isValid()
     if handle == 0 or not DoesEntityExist(handle) then return false end
 
     local isPlayer = self.type == 'Player'
+
+    if not isPlayer then
+        local netId = (isServer or NetworkGetEntityIsNetworked(handle)) and NetworkGetNetworkIdFromEntity(handle) or 0
+
+        if netId ~= self.netId then return false end
+    end
+
     local identity = self:get(isPlayer and 'userId' or 'ox_entity_identity')
 
     return identity == self.private.identity

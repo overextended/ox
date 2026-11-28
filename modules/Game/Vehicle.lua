@@ -17,6 +17,7 @@ local isServer = lib.context == 'server'
 ---@field new VehicleConstructor
 Vehicle = Class('Vehicle', GameEntity)
 Vehicle.type = Vehicle.__name
+Vehicle.fromHandle = GameEntity.bindFromHandle(Vehicle)
 
 ---@param model string | number
 ---@param x number

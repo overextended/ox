@@ -15,6 +15,7 @@ local isServer = lib.context == 'server'
 ---@field new PropConstructor
 Prop = Class('Prop', GameEntity)
 Prop.type = Prop.__name
+Prop.fromHandle = GameEntity.bindFromHandle(Prop)
 
 if isServer then
     ---@param model string | number

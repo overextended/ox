@@ -5,6 +5,15 @@ import { uuid } from '../../uuid';
 const isServer = context === 'server';
 const allowStateBagReplication = isServer || !GetConvarBool('sv_stateBagStrictMode', false);
 
+type EntityCache = Map<number, WeakRef<GameEntity>>;
+
+const instancesByClass = new WeakMap<object, EntityCache>();
+const instanceRegistry = new FinalizationRegistry<{ instances: EntityCache; handle: number; ref: WeakRef<GameEntity> }>(
+  ({ instances, handle, ref }) => {
+    if (instances.get(handle) === ref) instances.delete(handle);
+  },
+);
+
 enum StateBagReplication {
   /** The value is replicated to the server and all relevant clients. */
   REPLICATED = 1,
@@ -19,6 +28,30 @@ export abstract class GameEntity {
   /** The entity's network id. */
   readonly netId: number = 0;
   protected statebag: string = '';
+
+  /** Returns a cached wrapper for an existing entity handle. */
+  public static fromHandle<T extends GameEntity>(this: new (handle: number) => T, handle: number): T {
+    let instances = instancesByClass.get(this);
+
+    if (!instances) {
+      instances = new Map();
+      instancesByClass.set(this, instances);
+    }
+
+    const cached = instances.get(handle)?.deref();
+
+    if (cached instanceof this && cached.handle === handle && cached.isValid()) return cached;
+
+    instances.delete(handle);
+
+    const entity = new this(handle);
+    const ref = new WeakRef(entity);
+
+    instances.set(handle, ref);
+    instanceRegistry.register(entity, { instances, handle, ref });
+
+    return entity;
+  }
 
   /** Writes entity state, requesting server validation for synced values and strict client replication. */
   public async set(key: string, value: unknown, mode?: StateBagReplication): Promise<boolean> {
@@ -120,6 +153,13 @@ export abstract class GameEntity {
     if (!handle || !DoesEntityExist(handle)) return false;
 
     const isPlayer = this.type === 'Player';
+
+    if (!isPlayer) {
+      const netId = isServer || NetworkGetEntityIsNetworked(handle) ? NetworkGetNetworkIdFromEntity(handle) : 0;
+
+      if (netId !== this.netId) return false;
+    }
+
     const identity = this.get<string | number>(isPlayer ? 'userId' : 'ox_entity_identity');
 
     return identity === this.#identity;

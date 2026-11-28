@@ -62,7 +62,7 @@ end)
 setEntityState:registerHook(function(payload)
     if payload.value then return false end
 
-    local vehicle = Vehicle:new(payload.entityId)
+    local vehicle = Vehicle.fromHandle(payload.entityId)
     local props = vehicle:get(payload.key) ---@type VehicleProperties?
 
     if not props then return false end

@@ -123,7 +123,7 @@ AddStateBagChangeHandler('ox_lib:setVehicleProperties', '', function(bagName, ke
 
     if not entityExists then return end
 
-    local vehicle = Vehicle:new(entity)
+    local vehicle = Vehicle.fromHandle(entity)
 
     for i = 1, 10 do
         local isEntityOwner = NetworkGetEntityOwner(entity) == cache.playerId
