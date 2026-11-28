@@ -52,9 +52,8 @@ function triggerStateChangeHandlers(bag: string, key: string, value: unknown) {
 
 export class Player extends Ped {
   readonly type: string = 'Player';
-  readonly playerId;
   /** The player's server id. */
-  readonly netId: number = 0;
+  readonly netId: number;
 
   static readonly Local = (isServer ? null : this.fromId(-1))!;
 
@@ -108,16 +107,22 @@ export class Player extends Ped {
   private constructor(netId: number) {
     if (netId === -1) netId = isServer ? Number(GetPlayerFromIndex(0)) : GetPlayerServerId(PlayerId());
 
-    const playerId = isServer ? netId : GetPlayerFromServerId(netId);
-
     super(0);
-    this.playerId = playerId;
-    this.setHandle(GetPlayerPed(playerId));
+    this.netId = netId;
+    this.setHandle(isServer ? GetPlayerPed(netId) : 0);
   }
 
-  /** The player ped's script handle. */
+  /** The server ID on the server or current player index on the client. */
+  public get playerId() {
+    return isServer ? this.netId : GetPlayerFromServerId(this.netId);
+  }
+
+  /** The player ped's script handle, or 0 while out of scope. */
   public get handle() {
-    return isServer ? super.handle : GetPlayerPed(this.playerId);
+    if (isServer) return super.handle;
+
+    const playerId = this.playerId;
+    return playerId >= 0 ? GetPlayerPed(playerId) : 0;
   }
 
   /** Returns a remote class proxy for the player's user. */
@@ -130,9 +135,15 @@ export class Player extends Ped {
     return Character?.fromId(this.get('charId')!);
   }
 
-  /** Changes the player's ped model. */
-  public setModel(model: string | number) {
-    SetPlayerModel(this.playerId, model);
+  /** Streams and applies a model to the local player. Server calls return immediately. */
+  public async setModel(model: string | number) {
+    if (isServer || this.playerId !== Player.Local.playerId) return;
+
+    const { requestModel } = await import('../../../client/streaming');
+    const hash = await requestModel(model);
+
+    SetPlayerModel(this.playerId, hash);
+    SetModelAsNoLongerNeeded(hash);
   }
 
   /** Returns the player's server routing bucket or its client state bag value. */

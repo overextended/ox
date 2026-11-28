@@ -14,8 +14,9 @@ local User = isServer and require 'Ox.User' or nil
 local Character = isServer and require 'Ox.Character' or nil
 
 ---@class Player : Ped
----@field handle number The player ped's script handle.
+---@field handle number The player ped's script handle, or 0 while out of scope.
 ---@field netId number The player's server id.
+---@field playerId number The server id on the server or current player index on the client.
 ---@field new PlayerConstructor
 ---@field create nil
 local Player = Class('Player', Ped)
@@ -114,16 +115,21 @@ end
 function Player:constructor(netId)
     if netId == -1 then netId = isServer and tonumber(GetPlayerFromIndex(0)) or cache.serverId end
 
-    local playerId = isServer and netId or GetPlayerFromServerId(netId)
-
     self:super(0)
-    self.playerId = playerId
-    self:setHandle(GetPlayerPed(playerId))
+    self.netId = netId
+    self:setHandle(isServer and GetPlayerPed(netId) or 0)
 end
 
 function Player:__index(index)
+    if index == 'playerId' then
+        return isServer and self.netId or GetPlayerFromServerId(self.netId)
+    end
+
     if index == 'handle' then
-        return isServer and self.private.handle or GetPlayerPed(self.playerId)
+        if isServer then return self.private.handle end
+
+        local playerId = self.playerId
+        return playerId >= 0 and GetPlayerPed(playerId) or 0
     end
 
     return Player[index]
@@ -139,9 +145,16 @@ function Player:getCharacter()
     return Character?.fromId(self:get('charId'))
 end
 
+---Streams and applies a model to the local player. Server calls return immediately.
+---@async
 ---@param model string | number
 function Player:setModel(model)
-    SetPlayerModel(self.playerId, model)
+    if isServer or self.playerId ~= Player.Local.playerId then return end
+
+    local hash = lib.requestModel(model)
+
+    SetPlayerModel(self.playerId, hash)
+    SetModelAsNoLongerNeeded(hash)
 end
 
 function Player:getRoutingBucket()

@@ -15,7 +15,7 @@ local allowStateBagReplication = isServer or not GetConvarBool('sv_stateBagStric
 ---@field handle number The entity's script handle.
 ---@field netId number The entity's network id.
 ---@field type string
----@field protected private { handle: number }
+---@field protected private { handle: number, identity: number | string | nil }
 ---@field package new GameEntityConstructor
 local GameEntity = Class('GameEntity')
 
@@ -105,16 +105,42 @@ function GameEntity:keys()
 end
 
 function GameEntity:setHandle(handle)
-    local isPlayer = self.type == 'Player'
-    local playerId = isPlayer and self --[[@as Player]].playerId
-
     self.private.handle = handle
-    self.netId = playerId and (isServer and playerId or GetPlayerServerId(playerId)) or NetworkGetNetworkIdFromEntity(handle)
-    self.statebag = self.netId == 0 and ('localEntity:%s'):format(handle) or (isPlayer and 'player:%s' or 'entity:%s'):format(self.netId)
 
-    if self.netId == 0 or (isServer and not isPlayer) then
+    if self.type == 'Player' then
+        self.statebag = ('player:%s'):format(self.netId)
+        self.private.identity = self:get('userId')
+        return
+    end
+
+    self.netId = NetworkGetNetworkIdFromEntity(handle)
+    self.statebag = self.netId == 0 and ('localEntity:%s'):format(handle) or ('entity:%s'):format(self.netId)
+
+    if self.netId == 0 or isServer then
         EnsureEntityStateBag(handle)
     end
+
+    local identity = self:get('ox_entity_identity')
+
+    if not identity then
+        identity = lib.uuid.generate()
+        self:set('ox_entity_identity', identity)
+    end
+
+    self.private.identity = identity
+end
+
+---Returns whether the original bound entity still exists at this handle.
+---@return boolean
+function GameEntity:isValid()
+    local handle = self.handle
+
+    if handle == 0 or not DoesEntityExist(handle) then return false end
+
+    local isPlayer = self.type == 'Player'
+    local identity = self:get(isPlayer and 'userId' or 'ox_entity_identity')
+
+    return identity == self.private.identity
 end
 
 function GameEntity:getCoords()

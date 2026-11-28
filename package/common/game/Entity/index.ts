@@ -1,5 +1,6 @@
 import { Vector3 } from '../../vector';
 import { context } from '../..';
+import { uuid } from '../../uuid';
 
 const isServer = context === 'server';
 const allowStateBagReplication = isServer || !GetConvarBool('sv_stateBagStrictMode', false);
@@ -13,6 +14,7 @@ enum StateBagReplication {
 
 export abstract class GameEntity {
   #handle: number = 0;
+  #identity: string | number | undefined;
   readonly type: string = '';
   /** The entity's network id. */
   readonly netId: number = 0;
@@ -85,16 +87,42 @@ export abstract class GameEntity {
 
   /** Updates the script handle, network id, and state bag used by this wrapper. */
   protected setHandle(handle: number) {
-    const isPlayer = this.type === 'Player';
-    const playerId = isPlayer ? ((this as any).playerId as number) : 0;
     this.#handle = handle;
-    // @ts-expect-error
-    this.netId = isPlayer ? (isServer ? playerId : GetPlayerServerId(playerId)) : NetworkGetNetworkIdFromEntity(handle);
-    this.statebag = this.netId ? `${isPlayer ? 'player' : 'entity'}:${this.netId}` : `localEntity:${handle}`;
 
-    if (!this.netId || (isServer && !isPlayer)) {
+    if (this.type === 'Player') {
+      this.statebag = `player:${this.netId}`;
+      this.#identity = this.get<number>('userId');
+      return;
+    }
+
+    // @ts-expect-error
+    this.netId = NetworkGetNetworkIdFromEntity(handle);
+    this.statebag = this.netId ? `entity:${this.netId}` : `localEntity:${handle}`;
+
+    if (!this.netId || isServer) {
       EnsureEntityStateBag(handle);
     }
+
+    let identity = this.get<string>('ox_entity_identity');
+
+    if (!identity) {
+      identity = uuid.generate();
+      this.set('ox_entity_identity', identity);
+    }
+
+    this.#identity = identity;
+  }
+
+  /** Returns whether the original bound entity still exists at this handle. */
+  public isValid() {
+    const handle = this.handle;
+
+    if (!handle || !DoesEntityExist(handle)) return false;
+
+    const isPlayer = this.type === 'Player';
+    const identity = this.get<string | number>(isPlayer ? 'userId' : 'ox_entity_identity');
+
+    return identity === this.#identity;
   }
 
   /** Returns the entity's world coordinates. */
