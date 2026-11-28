@@ -4,6 +4,8 @@ import { GameEntity } from '../Entity';
 export type VehicleType = 'automobile' | 'bike' | 'boat' | 'heli' | 'plane' | 'submarine' | 'trailer' | 'train';
 
 export class Vehicle extends GameEntity {
+  readonly type: string = 'Vehicle';
+
   /** Wraps an existing vehicle handle and its state bag. */
   constructor(handle: number) {
     super();
